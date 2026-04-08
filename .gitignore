@@ -1,0 +1,42 @@
+# ============================================================
+# Baseline ignores — universal across all project types.
+# Add language/framework-specific entries for your project
+# (e.g., node_modules/, __pycache__/, target/, vendor/).
+# ============================================================
+
+# --- OS artifacts ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# --- Windows NTFS alternate data streams ---
+*:Zone.Identifier
+
+# --- Windows Endpoint DLP / Microsoft Purview ---
+Endpoint DLP*
+
+# --- Editor / IDE personal files ---
+# IntelliJ / WebStorm / PyCharm / Rider
+.idea/
+
+# VS Code (workspace settings are personal; shared configs like
+# extensions.json or launch.json should be committed separately
+# if your team uses them)
+.vscode/
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.local
+
+# --- Common build output ---
+dist/
+build/
+coverage/
