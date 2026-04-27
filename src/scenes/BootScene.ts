@@ -33,42 +33,41 @@ export default class BootScene extends Scene {
   }
 
   private createBackgroundMusic(audioContext: AudioContext) {
-    // Simple western jazz-inspired background music
+    // Softer ambient western-inspired background music
     const music = {
       play: () => {
-        const oscillator = audioContext.createOscillator();
+        const osc1 = audioContext.createOscillator();
+        const osc2 = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
-        oscillator.connect(gainNode);
+        osc1.type = 'triangle';
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(220, audioContext.currentTime); // A3
+        osc2.frequency.setValueAtTime(164.81, audioContext.currentTime); // E3
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        // Western jazz melody notes (simplified)
-        const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88]; // C4 to B4
+        gainNode.gain.setValueAtTime(0.04, audioContext.currentTime);
+
+        const notes = [220, 246.94, 261.63, 293.66]; // A3, B3, C4, D4
         let noteIndex = 0;
 
-        oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
-        oscillator.type = 'sawtooth';
+        const intervalId = window.setInterval(() => {
+          noteIndex = (noteIndex + 1) % notes.length;
+          osc1.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
+          osc2.frequency.setValueAtTime(notes[(noteIndex + 2) % notes.length] * 0.5, audioContext.currentTime);
+        }, 900);
 
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-
-        const playNote = () => {
-          if (noteIndex < notes.length) {
-            oscillator.frequency.setValueAtTime(notes[noteIndex], audioContext.currentTime);
-            noteIndex++;
-            setTimeout(playNote, 300);
-          } else {
-            // Loop back
-            noteIndex = 0;
-            setTimeout(playNote, 1000);
-          }
-        };
-
-        playNote();
-        oscillator.start();
+        osc1.start();
+        osc2.start();
 
         return {
           stop: () => {
-            oscillator.stop();
+            osc1.stop();
+            osc2.stop();
+            window.clearInterval(intervalId);
           }
         };
       }

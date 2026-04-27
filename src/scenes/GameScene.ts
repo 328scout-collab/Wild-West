@@ -119,7 +119,7 @@ export default class GameScene extends Scene {
   private selectionText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
 
-  private currentRound = 1;
+  private currentRound = 0;
   private startingCurrency = 200;
   private currentCurrency = 200;
   private currentWave = 0;
@@ -154,10 +154,14 @@ export default class GameScene extends Scene {
     super('Game');
   }
 
-  init() {
-    // Increment round when returning from round end
+  init(data?: { reset?: boolean }) {
+    if (data?.reset) {
+      this.currentRound = 0;
+    }
+    // Increment round when starting or continuing
     this.currentRound += 1;
   }
+
   private getCurrentGridRows(): number {
     return Math.min(6, 3 + Math.floor((this.currentRound - 1) / 5));
   }

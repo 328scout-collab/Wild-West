@@ -89,7 +89,7 @@ export default class MenuScene extends Scene {
       startButton.setBackgroundColor('#2d5a27');
     });
     startButton.on('pointerdown', () => {
-      this.scene.start('Game');
+      this.scene.start('Game', { reset: true });
     });
 
     const upgradeButton = this.add
