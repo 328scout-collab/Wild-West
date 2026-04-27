@@ -129,6 +129,7 @@ export default class GameScene extends Scene {
   private defenseHealth = 100;
   private defenseMaxHealth = 100;
   private gold = 0;
+  private pendingSpawns = 0;
   private currencyUpgradeCount = 0;
   private freezeUpgradeCount = 0;
   private roundActive = false;
@@ -145,6 +146,7 @@ export default class GameScene extends Scene {
   private units!: Phaser.GameObjects.Group;
   private projectiles!: Phaser.Physics.Arcade.Group;
   private goldText!: Phaser.GameObjects.Text;
+  private debugText!: Phaser.GameObjects.Text;
   private unitOccupancy: boolean[][] = [];
 
   private backgroundMusic: any = null;
@@ -245,6 +247,14 @@ export default class GameScene extends Scene {
       })
       .setOrigin(0.5);
 
+    this.debugText = this.add
+      .text(16, 110, '', {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        color: '#ffffff'
+      })
+      .setOrigin(0, 0);
+
     this.enemies = this.physics.add.group({ runChildUpdate: true });
     this.units = this.add.group();
     this.projectiles = this.physics.add.group();
@@ -331,6 +341,15 @@ export default class GameScene extends Scene {
         enemy.clearTint();
       }
 
+      // Enforce movement for regular enemies in case physics velocity is reset
+      const isBoss = enemy.getData('isBoss') as boolean;
+      if (!freezeEndTime && !isBoss) {
+        const originalSpeed = enemy.getData('originalSpeed') as number;
+        if (enemy.body && (enemy.body as Phaser.Physics.Arcade.Body).velocity.x === 0) {
+          enemy.setVelocityX(-originalSpeed);
+        }
+      }
+
       // Handle special enemy behaviors
       this.handleEnemyBehavior(enemy, _time, delta);
     });
@@ -348,8 +367,13 @@ export default class GameScene extends Scene {
     });
 
     this.handleUnitFire(_time);
+    const firstEnemy = this.enemies.getChildren()[0] as Phaser.Physics.Arcade.Image | undefined;
+    const enemyInfo = firstEnemy
+      ? `x=${firstEnemy.x.toFixed(0)} vx=${((firstEnemy.body as Phaser.Physics.Arcade.Body).velocity.x).toFixed(0)}`
+      : 'none';
+    this.debugText.setText(`Wave ${this.currentWave}/${this.totalWaves} | Enemies: ${this.enemies.countActive(true)} | Pending: ${this.pendingSpawns} | ${enemyInfo}`);
 
-    if (this.waveInProgress && this.enemies.countActive(true) === 0) {
+    if (this.waveInProgress && this.enemies.countActive(true) === 0 && this.pendingSpawns === 0) {
       this.waveInProgress = false;
       if (this.currentWave >= this.totalWaves) {
         this.completeRound();
@@ -1074,6 +1098,7 @@ export default class GameScene extends Scene {
     }
 
     this.currentWave += 1;
+    this.pendingSpawns = 0;
     this.updateWaveText();
     this.statusText.setText(`Wave ${this.currentWave} of ${this.totalWaves}`);
     this.waveInProgress = true;
@@ -1125,6 +1150,7 @@ export default class GameScene extends Scene {
       }
       
       for (let i = 0; i < enemiesPerRow; i++) {
+        this.pendingSpawns += 1;
         this.time.addEvent({
           delay: spawnIndex * spawnDelay,
           callback: () => this.spawnEnemy(enemyType, rowIndex)
@@ -1176,6 +1202,7 @@ export default class GameScene extends Scene {
     enemy.body.setOffset(-width / 2 + TILE_SIZE / 2, 0);
 
     this.enemies.add(enemy);
+    this.pendingSpawns = Math.max(0, this.pendingSpawns - 1);
     this.showEnemyInfo(type);
   }
 

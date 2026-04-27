@@ -8,6 +8,10 @@ export const gameConfig: GameConfig = {
   height: 640,
   backgroundColor: '#1e1e2f',
   parent: 'game-container',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
   physics: {
     default: 'arcade',
     arcade: {
