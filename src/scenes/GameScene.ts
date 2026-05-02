@@ -239,6 +239,35 @@ export default class GameScene extends Scene {
       })
       .setOrigin(0.5);
 
+    const freezeButton = this.add
+      .text(this.cameras.main.width - 20, 85, '❄️ Freeze', {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        color: '#ffffff',
+        backgroundColor: '#005555',
+        stroke: '#ffffff',
+        strokeThickness: 1
+      })
+      .setPadding(8)
+      .setInteractive({ useHandCursor: true })
+      .setOrigin(1, 0);
+
+    freezeButton.on('pointerover', () => {
+      freezeButton.setBackgroundColor('#006666');
+    });
+    freezeButton.on('pointerout', () => {
+      freezeButton.setBackgroundColor('#005555');
+    });
+    freezeButton.on('pointerdown', () => {
+      if (this.roundActive && this.freezeCooldownMs <= 0) {
+        this.activateFreeze();
+      } else if (!this.roundActive) {
+        this.statusText.setText('Freeze only available during rounds');
+      } else {
+        this.statusText.setText(`Freeze on cooldown: ${(this.freezeCooldownMs / 1000).toFixed(1)}s`);
+      }
+    });
+
     this.statusText = this.add
       .text(this.cameras.main.centerX, this.cameras.main.height - 48, '', {
         fontFamily: 'Arial',
@@ -341,12 +370,32 @@ export default class GameScene extends Scene {
         enemy.clearTint();
       }
 
-      // Enforce movement for regular enemies in case physics velocity is reset
-      const isBoss = enemy.getData('isBoss') as boolean;
-      if (!freezeEndTime && !isBoss) {
-        const originalSpeed = enemy.getData('originalSpeed') as number;
-        if (enemy.body && (enemy.body as Phaser.Physics.Arcade.Body).velocity.x === 0) {
-          enemy.setVelocityX(-originalSpeed);
+      // Check for units blocking the way
+      const blockingUnit = this.findBlockingUnit(enemy);
+      if (blockingUnit) {
+        // Stop movement completely
+        enemy.setVelocityX(0);
+        (enemy.body as Phaser.Physics.Arcade.Body).setAccelerationX(0);
+        enemy.setData('isBlocked', true);
+        
+        // Damage the unit
+        const unitHealth = blockingUnit.getData('health') as number;
+        const damagePerSecond = 75; // Enemies deal significant damage while blocked
+        const newHealth = unitHealth - (delta / 1000) * damagePerSecond;
+        if (newHealth <= 0) {
+          this.destroyUnit(blockingUnit);
+        } else {
+          blockingUnit.setData('health', newHealth);
+        }
+      } else {
+        enemy.setData('isBlocked', false);
+        // Enforce movement for regular enemies in case physics velocity is reset
+        const isBoss = enemy.getData('isBoss') as boolean;
+        if (!freezeEndTime && !isBoss) {
+          const originalSpeed = enemy.getData('originalSpeed') as number;
+          if (enemy.body && (enemy.body as Phaser.Physics.Arcade.Body).velocity.x === 0) {
+            enemy.setVelocityX(-originalSpeed);
+          }
         }
       }
 
@@ -622,20 +671,21 @@ export default class GameScene extends Scene {
   }
 
   private createUnitButtons() {
-    const buttonX = GRID_OFFSET_X + GRID_COLS * (TILE_SIZE + TILE_PADDING) + 40;
+    const buttonX = 950;
     let buttonY = GRID_OFFSET_Y;
 
     Object.entries(UNIT_CONFIGS).forEach(([type, config]) => {
       const button = this.add
-        .text(buttonX, buttonY, `${type} ($${config.cost})`, {
+        .text(buttonX, buttonY, `${type}\n$${config.cost}`, {
           fontFamily: 'Arial',
-          fontSize: '20px',
+          fontSize: '14px',
           color: '#ffffff',
-          backgroundColor: '#333333'
+          backgroundColor: '#333333',
+          align: 'center'
         })
-        .setPadding(10)
+        .setPadding(6)
         .setInteractive({ useHandCursor: true })
-        .setOrigin(0, 0);
+        .setOrigin(1, 0);
 
       button.on('pointerdown', () => {
         if (this.currentCurrency >= config.cost) {
@@ -647,19 +697,20 @@ export default class GameScene extends Scene {
         }
       });
 
-      buttonY += 60;
+      buttonY += 50;
     });
 
     const upgradeButton = this.add
-      .text(buttonX, buttonY, 'Upgrade Start +25 ($20)', {
+      .text(buttonX, buttonY, `Upgrade\n+25 ($20)`, {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '12px',
         color: '#ffffff',
-        backgroundColor: '#555500'
+        backgroundColor: '#555500',
+        align: 'center'
       })
-      .setPadding(10)
+      .setPadding(6)
       .setInteractive({ useHandCursor: true })
-      .setOrigin(0, 0);
+      .setOrigin(1, 0);
 
     upgradeButton.on('pointerdown', () => {
       if (this.gold >= 20) {
@@ -669,41 +720,19 @@ export default class GameScene extends Scene {
       }
     });
 
-    buttonY += 60;
-
-    const freezeButton = this.add
-      .text(buttonX, buttonY, 'Freeze Enemy (5s)', {
-        fontFamily: 'Arial',
-        fontSize: '20px',
-        color: '#ffffff',
-        backgroundColor: '#005555'
-      })
-      .setPadding(10)
-      .setInteractive({ useHandCursor: true })
-      .setOrigin(0, 0);
-
-    freezeButton.on('pointerdown', () => {
-      if (this.roundActive && this.freezeCooldownMs <= 0) {
-        this.activateFreeze();
-      } else if (!this.roundActive) {
-        this.statusText.setText('Freeze only available during rounds');
-      } else {
-        this.statusText.setText('Freeze is on cooldown');
-      }
-    });
-
-    buttonY += 60;
+    buttonY += 50;
 
     const freezeUpgradeButton = this.add
-      .text(buttonX, buttonY, 'Upgrade Freeze ($30)', {
+      .text(buttonX, buttonY, `Upgrade\nFreeze\n($30)`, {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '12px',
         color: '#ffffff',
-        backgroundColor: '#550055'
+        backgroundColor: '#550055',
+        align: 'center'
       })
-      .setPadding(10)
+      .setPadding(6)
       .setInteractive({ useHandCursor: true })
-      .setOrigin(0, 0);
+      .setOrigin(1, 0);
 
     freezeUpgradeButton.on('pointerdown', () => {
       if (this.gold >= 30) {
@@ -771,7 +800,8 @@ export default class GameScene extends Scene {
     const row = Math.floor((pointer.y - GRID_OFFSET_Y) / (TILE_SIZE + TILE_PADDING));
     const col = Math.floor((pointer.x - GRID_OFFSET_X) / (TILE_SIZE + TILE_PADDING));
 
-    if (row < 0 || row >= this.getCurrentGridRows() || col < 0 || col >= GRID_COLS) {
+    // Prevent placement in defense zone or outside grid
+    if (row < 0 || row >= this.getCurrentGridRows() || col < 0 || col >= GRID_COLS || pointer.x < GRID_OFFSET_X) {
       return;
     }
 
@@ -859,8 +889,10 @@ export default class GameScene extends Scene {
       cost: unitConfig.cost,
       range: type === 'Hunter' ? 4 : type === 'Sniper' ? 9 : type === 'Bomber' ? 6 : 5, // Sheriff has shorter range
       cooldown: type === 'Hunter' ? 1000 : type === 'Sniper' ? 1800 : type === 'Bomber' ? 2500 : 1200, // Bomber has longer cooldown
-      damage: type === 'Hunter' ? 18 : type === 'Sniper' ? 28 : type === 'Bomber' ? 35 : 15 // Sheriff has lower damage but buffs others
+      damage: type === 'Hunter' ? 25 : type === 'Sniper' ? 38 : type === 'Bomber' ? 48 : 20 // Increased damage output
     });
+    unit.setData('health', type === 'Hunter' ? 70 : type === 'Sniper' ? 60 : type === 'Bomber' ? 85 : 95); // Increased unit health
+    unit.setData('maxHealth', type === 'Hunter' ? 70 : type === 'Sniper' ? 60 : type === 'Bomber' ? 85 : 95);
     
     // Special unit properties
     if (type === 'Sheriff') {
@@ -942,7 +974,30 @@ export default class GameScene extends Scene {
     const enemy = enemyObject as Phaser.Physics.Arcade.Image;
     const damage = bullet.getData('damage') as number;
     const currentHealth = enemy.getData('health') as number;
-    enemy.setData('health', currentHealth - damage);
+    const newHealth = currentHealth - damage;
+    enemy.setData('health', newHealth);
+    
+    // Visual damage feedback
+    enemy.setTint(0xff6666);
+    this.time.addEvent({
+      delay: 100,
+      callback: () => {
+        if (enemy.active) {
+          enemy.clearTint();
+        }
+      }
+    });
+
+    // Show damage number
+    this.add.text(enemy.x, enemy.y - 30, `-${damage}`, {
+      fontFamily: 'Arial',
+      fontSize: '16px',
+      color: '#ff0000',
+      stroke: '#000000',
+      strokeThickness: 2
+    })
+      .setOrigin(0.5)
+      .setDepth(1000);
     
     // Boss retaliation when damaged
     const canRetaliate = enemy.getData('canRetaliate') as boolean;
@@ -1039,8 +1094,16 @@ export default class GameScene extends Scene {
   }
 
   private onEnemyReachedDefense(enemy: Phaser.Physics.Arcade.Image) {
+    const type = enemy.getData('type') as string;
+    const config = ENEMY_CONFIGS[type];
+    const maxHealth = config.maxHealth;
+    
+    // Damage scales with enemy maxHealth (stronger enemies deal more damage)
+    const baseDamage = Math.ceil(maxHealth / 5);
+    
     enemy.destroy();
-    this.applyDefenseDamage(20);
+    this.applyDefenseDamage(baseDamage);
+    this.statusText.setText(`${type} breached! -${baseDamage} health`);
     if (this.defenseHealth <= 0) {
       this.failRound();
     }
@@ -1274,7 +1337,14 @@ export default class GameScene extends Scene {
 
     this.roundActive = false;
     this.roundFailed = true;
-    this.statusText.setText('Round failed - defense breached');
+    this.statusText.setText('Defense destroyed! Game Over');
+    
+    this.time.addEvent({
+      delay: 2000,
+      callback: () => {
+        this.transitionToScene('Menu');
+      }
+    });
   }
 
   private updateRoundText() {
@@ -1363,6 +1433,47 @@ export default class GameScene extends Scene {
     if (sound) {
       sound.play();
     }
+  }
+
+  private findBlockingUnit(enemy: Phaser.Physics.Arcade.Image): Phaser.GameObjects.Image | null {
+    const enemyRow = enemy.getData('row') as number;
+    const enemyX = enemy.x;
+    const enemyWidth = (enemy.getData('widthTiles') as number) * TILE_SIZE;
+    let closestUnit: Phaser.GameObjects.Image | null = null;
+    let closestDistance = Infinity;
+
+    this.units.getChildren().forEach((child) => {
+      const unit = child as Phaser.GameObjects.Image;
+      const unitRow = unit.getData('row') as number;
+      const unitX = (unit as any).x as number;
+      if (unitRow === enemyRow && unitX > enemyX) {
+        const distance = unitX - enemyX;
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestUnit = unit;
+        }
+      }
+    });
+
+    // Only block if within a certain distance, accounting for enemy width
+    if (closestUnit) {
+      const unitX = (closestUnit as any).x as number;
+      // Position enemy just before the unit (maintain spacing)
+      const stopX = unitX - TILE_SIZE / 2 - enemyWidth / 2 - 8;
+      if (closestDistance <= TILE_SIZE * 1.5) {
+        enemy.setX(stopX);
+        return closestUnit;
+      }
+    }
+    return null;
+  }
+
+  private destroyUnit(unit: Phaser.GameObjects.Image) {
+    const row = unit.getData('row') as number;
+    const col = unit.getData('col') as number;
+    this.unitOccupancy[row][col] = false;
+    unit.destroy();
+    this.playSound('unitDestroyed'); // Assuming there's a sound, or remove
   }
 
   private transitionToScene(sceneKey: string, data?: any) {

@@ -115,8 +115,35 @@ export default class MenuScene extends Scene {
       this.showUpgradeShop();
     });
 
-    // Fade in camera
-    this.cameras.main.fadeIn(500, 0, 0, 0);
+    const resetButton = this.add
+      .text(centerX, centerY + 140, '🔄 Reset Progress', {
+        fontFamily: 'Arial',
+        fontSize: '24px',
+        color: '#ffffff',
+        backgroundColor: '#8b0000',
+        stroke: '#ffffff',
+        strokeThickness: 1
+      })
+      .setOrigin(0.5)
+      .setPadding(12)
+      .setInteractive({ useHandCursor: true });
+
+    resetButton.on('pointerover', () => {
+      resetButton.setBackgroundColor('#b22222');
+    });
+    resetButton.on('pointerout', () => {
+      resetButton.setBackgroundColor('#8b0000');
+    });
+    resetButton.on('pointerdown', () => {
+      this.resetProgress();
+    });
+  }
+
+  private resetProgress() {
+    localStorage.removeItem('aquatic-mafia-gold');
+    localStorage.removeItem('aquatic-mafia-currency-upgrades');
+    localStorage.removeItem('aquatic-mafia-freeze-upgrades');
+    this.updateUpgradeDisplay();
   }
 
   private updateUpgradeDisplay() {
