@@ -1446,8 +1446,8 @@ export default class GameScene extends Scene {
       const unit = child as Phaser.GameObjects.Image;
       const unitRow = unit.getData('row') as number;
       const unitX = (unit as any).x as number;
-      if (unitRow === enemyRow && unitX > enemyX) {
-        const distance = unitX - enemyX;
+      if (unitRow === enemyRow && unitX < enemyX) {
+        const distance = enemyX - unitX;
         if (distance < closestDistance) {
           closestDistance = distance;
           closestUnit = unit;
